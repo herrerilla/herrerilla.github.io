@@ -1,0 +1,364 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UsaMarket - Marketplace Estudiantil</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5fbff;
+      margin: 0;
+      padding: 20px;
+      background-image: url(imagenes/kisspng-sergio-arboleda-university-logo-business-school-encuentro-colombiano-de-combinatoria-ecco-2-18-5b778e55a3c529.9334156515345618776708.png);
+      background-attachment: fixed, scroll;
+      background-size: auto;
+    }
+    header {
+      text-align: center;
+      background: #08447c;
+      color: white;
+      padding: 15px 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+    .product, .form-container, .filters, .detail-view, .auth-container, .profile-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .product h3 {
+      margin: 0 0 5px;
+    }
+    .product p {
+      margin: 5px 0;
+    }
+    button {
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .btn-contact { background-color: #2d72d9; color: white; }
+    .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
+    .btn-submit { background-color: #28a745; color: white; }
+    .btn-logout, .btn-back { background-color: #6c757d; color: white; margin-top: 10px; }
+    input, textarea {
+      width: 100%; padding: 8px; margin: 5px 0 10px;
+      border: 1px solid #ccc; border-radius: 5px;
+    }
+    .filters input { width: 48%; display: inline-block; }
+    #message { text-align: center; margin-bottom: 15px; color: green; font-weight: bold; }
+    .hidden { display: none; }
+    img.preview { width: 100%; max-width: 200px; margin-top: 10px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>UsaMarket - Compra y Venta entre Estudiantes</h1>
+  </header>
+
+  <div class="container">
+
+    <!-- AUTENTICACIÓN -->
+    <div class="auth-container" id="auth-container">
+      <h2>Bienvenido</h2>
+      <button onclick="showRegister()">Crear Cuenta</button>
+      <button onclick="showLogin()">Iniciar Sesión</button>
+    </div>
+
+    <div class="auth-container hidden" id="register-container">
+      <h3>Registro</h3>
+      <input type="email" id="register-email" placeholder="Correo institucional" />
+      <input type="password" id="register-pass" placeholder="Contraseña" />
+      <input type="text" id="register-code" placeholder="Código de administrador (opcional)" />
+      <button onclick="register()">Registrarse</button>
+    </div>
+
+    <div class="auth-container hidden" id="login-container">
+      <h3>Inicio de Sesión</h3>
+      <input type="email" id="login-email" placeholder="Correo institucional" />
+      <input type="password" id="login-pass" placeholder="Contraseña" />
+      <button onclick="login()">Entrar</button>
+    </div>
+
+    <!-- PERFIL -->
+    <div class="profile-container hidden" id="profile">
+      <h3>Mi Cuenta</h3>
+      <p><strong>Correo:</strong> <span id="user-email"></span></p>
+      <p><strong>Rol:</strong> <span id="user-role"></span></p>
+      <p><strong>Productos publicados:</strong> <span id="user-count"></span></p>
+      <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+
+    <div id="message"></div>
+
+    <!-- FORMULARIO -->
+    <div class="form-container hidden" id="form-container">
+      <h2>Subir nuevo producto</h2>
+      <input type="text" id="product-name" placeholder="Nombre del producto" required />
+      <textarea id="product-desc" placeholder="Descripción" required></textarea>
+      <input type="number" id="product-price" placeholder="Precio (COP)" required />
+      <input type="text" id="product-contact" placeholder="Información de contacto" required />
+      <input type="file" id="product-image" accept="image/*" onchange="previewImage()" />
+      <img id="image-preview" class="preview hidden" />
+      <button class="btn-submit" onclick="addProduct()">Publicar producto</button>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filters hidden" id="filters">
+      <h3>Buscar y filtrar</h3>
+      <input type="text" id="search" placeholder="Buscar por nombre" oninput="filterProducts()" />
+      <input type="number" id="min-price" placeholder="Precio mínimo" oninput="filterProducts()" />
+      <input type="number" id="max-price" placeholder="Precio máximo" oninput="filterProducts()" />
+    </div>
+
+    <!-- LISTA DE PRODUCTOS -->
+    <div class="product-list hidden" id="product-list"></div>
+
+    <!-- VISTA DETALLADA -->
+    <div class="detail-view hidden" id="detail-view">
+      <h2 id="detail-name"></h2>
+      <img id="detail-image" class="preview" />
+      <p id="detail-desc"></p>
+      <p><strong>Precio:</strong> <span id="detail-price"></span> COP</p>
+      <p><strong>Contacto:</strong> <span id="detail-contact"></span></p>
+      <button class="btn-back" onclick="backToList()">Volver</button>
+    </div>
+  </div>
+
+  <script>
+    let products = [];
+    let currentUser = null;
+    let users = JSON.parse(localStorage.getItem("users") || "[]");
+
+    function showMessage(msg) {
+      const el = document.getElementById("message");
+      el.innerText = msg;
+      setTimeout(() => el.innerText = "", 3000);
+    }
+
+    function showRegister() {
+      document.getElementById("auth-container").classList.add("hidden");
+      document.getElementById("register-container").classList.remove("hidden");
+    }
+
+    function showLogin() {
+      document.getElementById("auth-container").classList.add("hidden");
+      document.getElementById("login-container").classList.remove("hidden");
+    }
+
+    function register() {
+      const email = document.getElementById("register-email").value.trim();
+      const pass = document.getElementById("register-pass").value;
+      const code = document.getElementById("register-code").value.trim();
+      if (!email.endsWith("@usa.edu.co") || !pass) {
+        alert("Correo institucional y contraseña requeridos.");
+        return;
+      }
+      if (users.find(u => u.email === email)) {
+        alert("Ya existe una cuenta con ese correo.");
+        return;
+      }
+      users.push({ email, pass, isAdmin: code === "Admin978_entryrazechamber" });
+      localStorage.setItem("users", JSON.stringify(users));
+      showMessage("Cuenta creada. Ahora inicia sesión.");
+      document.getElementById("register-container").classList.add("hidden");
+      document.getElementById("auth-container").classList.remove("hidden");
+    }
+
+    function login() {
+      const email = document.getElementById("login-email").value.trim();
+      const pass = document.getElementById("login-pass").value;
+      const user = users.find(u => u.email === email && u.pass === pass);
+      if (!user) {
+        alert("Credenciales incorrectas.");
+        return;
+      }
+      currentUser = user;
+      localStorage.setItem("user", JSON.stringify(currentUser));
+      initUI();
+    }
+
+    function logout() {
+      localStorage.removeItem("user");
+      location.reload();
+    }
+
+    function previewImage() {
+      const input = document.getElementById("product-image");
+      const preview = document.getElementById("image-preview");
+      const file = input.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          preview.src = reader.result;
+          preview.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function addProduct() {
+      const name = document.getElementById("product-name").value.trim();
+      const desc = document.getElementById("product-desc").value.trim();
+      const price = parseFloat(document.getElementById("product-price").value);
+      const contact = document.getElementById("product-contact").value.trim();
+      const imageInput = document.getElementById("product-image");
+      const image = imageInput.files[0];
+
+      if (!name || !desc || isNaN(price) || !contact || !image) {
+        alert("Completa todos los campos e incluye una imagen.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        const newProduct = {
+          id: Date.now(),
+          name,
+          desc,
+          price,
+          contact,
+          owner: currentUser.email,
+          image: reader.result
+        };
+        products.unshift(newProduct);
+        renderProducts();
+        showMessage("Producto publicado correctamente");
+        document.getElementById("product-name").value = "";
+        document.getElementById("product-desc").value = "";
+        document.getElementById("product-price").value = "";
+        document.getElementById("product-contact").value = "";
+        imageInput.value = "";
+        document.getElementById("image-preview").classList.add("hidden");
+        document.getElementById("user-count").innerText = products.filter(p => p.owner === currentUser.email).length;
+      };
+      reader.readAsDataURL(image);
+    }
+
+    function deleteProduct(id) {
+      const product = products.find(p => p.id === id);
+      if (!product || (!currentUser.isAdmin && product.owner !== currentUser.email)) {
+        alert("No tienes permiso para eliminar este producto.");
+        return;
+      }
+      products = products.filter(p => p.id !== id);
+      renderProducts();
+      showMessage("Producto eliminado");
+    }
+
+    function showDetail(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      document.getElementById("product-list").classList.add("hidden");
+      document.getElementById("detail-view").classList.remove("hidden");
+
+      document.getElementById("detail-name").innerText = product.name;
+      document.getElementById("detail-desc").innerText = product.desc;
+      document.getElementById("detail-price").innerText = product.price.toLocaleString();
+      document.getElementById("detail-contact").innerText = product.contact;
+      document.getElementById("detail-image").src = product.image;
+    }
+
+    function backToList() {
+      document.getElementById("detail-view").classList.add("hidden");
+      document.getElementById("product-list").classList.remove("hidden");
+    }
+
+    function filterProducts() {
+      const search = document.getElementById("search").value.toLowerCase();
+      const minPrice = parseFloat(document.getElementById("min-price").value) || 0;
+      const maxPrice = parseFloat(document.getElementById("max-price").value) || Infinity;
+      const filtered = products.filter(p =>
+        p.name.toLowerCase().includes(search) &&
+        p.price >= minPrice &&
+        p.price <= maxPrice
+      );
+      renderProducts(filtered);
+    }
+
+    function renderProducts(list = products) {
+      const container = document.getElementById("product-list");
+      container.innerHTML = "";
+
+      if (list.length === 0) {
+        container.innerHTML = "<p>No se encontraron productos.</p>";
+        return;
+      }
+
+      list.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "product";
+        div.innerHTML = `
+          <h3>${p.name}</h3>
+          <img src="${p.image}" class="preview" />
+          <p><strong>Precio:</strong> $${p.price.toLocaleString()} COP</p>
+          <button class="btn-contact" onclick="showDetail(${p.id})">Ver detalles</button>
+          ${(currentUser.isAdmin || p.owner === currentUser.email) ?
+            `<button class="btn-delete" onclick="deleteProduct(${p.id})">Eliminar</button>` : ""}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function initUI() {
+      currentUser = JSON.parse(localStorage.getItem("user"));
+      if (!currentUser) return;
+
+      document.getElementById("auth-container").classList.add("hidden");
+      document.getElementById("login-container").classList.add("hidden");
+      document.getElementById("register-container").classList.add("hidden");
+      document.getElementById("form-container").classList.remove("hidden");
+      document.getElementById("filters").classList.remove("hidden");
+      document.getElementById("product-list").classList.remove("hidden");
+      document.getElementById("profile").classList.remove("hidden");
+
+      document.getElementById("user-email").innerText = currentUser.email;
+      document.getElementById("user-role").innerText = currentUser.isAdmin ? "Administrador" : "Estudiante";
+      document.getElementById("user-count").innerText = products.filter(p => p.owner === currentUser.email).length;
+
+      renderProducts();
+    }
+
+    // Autologin
+    if (localStorage.getItem("user")) initUI();
+  </script>
+
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDeoIezb30c8SRIU1FyCG0lLR2tmtOdkPw",
+    authDomain: "usamarket-c6f88.firebaseapp.com",
+    projectId: "usamarket-c6f88",
+    storageBucket: "usamarket-c6f88.appspot.com",
+    messagingSenderId: "233013456340",
+    appId: "1:233013456340:web:9e9069bd89d2af06b27a41",
+    measurementId: "G-6ZQH1QDECH"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Tu lógica personalizada se puede insertar aquí.
+  // Por ahora solo configuramos la conexión.
+  console.log("Firebase configurado correctamente");
+</script>
+
+</body>
+</html>
