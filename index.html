@@ -10,9 +10,6 @@
       background: #f5fbff;
       margin: 0;
       padding: 20px;
-      background-image: url(imagenes/kisspng-sergio-arboleda-university-logo-business-school-encuentro-colombiano-de-combinatoria-ecco-2-18-5b778e55a3c529.9334156515345618776708.png);
-      background-attachment: fixed, scroll;
-      background-size: auto;
     }
     header {
       text-align: center;
@@ -31,12 +28,8 @@
       padding: 15px;
       margin-bottom: 20px;
     }
-    .product h3 {
-      margin: 0 0 5px;
-    }
-    .product p {
-      margin: 5px 0;
-    }
+    .product h3 { margin: 0 0 5px; }
+    .product p { margin: 5px 0; }
     button {
       border: none;
       padding: 8px 12px;
@@ -115,10 +108,17 @@
       <button class="btn-back" onclick="backToList()">Volver</button>
     </div>
   </div>
+  
+  <script src="data.js"></script>
+  
   <script>
-    let products = [];
+    // Usa los productos de demostración como base.
+    // Usamos [...initialProducts] para crear una copia y no modificar el original.
+    let products = [...initialProducts]; 
     let currentUser = null;
-    let users = JSON.parse(localStorage.getItem("users") || "[]");
+    
+    // Carga los usuarios de localStorage, si no existen, usa los de demostración.
+    let users = JSON.parse(localStorage.getItem("users")) || initialUsers;
 
     function showMessage(msg) {
       const el = document.getElementById("message");
@@ -149,11 +149,12 @@
         return;
       }
       users.push({ email, pass, isAdmin: code === "Admin978_entryrazechamber" });
+      // Guarda la lista actualizada de usuarios (incluyendo el nuevo) en localStorage.
       localStorage.setItem("users", JSON.stringify(users));
       showMessage("Cuenta creada. Ahora inicia sesión.");
       document.getElementById("register-container").classList.add("hidden");
       document.getElementById("auth-container").classList.remove("hidden");
-      document.getElementById("login-container").classList.remove("hidden"); // Show login form after register
+      document.getElementById("login-container").classList.remove("hidden");
     }
 
     function login() {
@@ -212,7 +213,9 @@
           owner: currentUser.email,
           image: reader.result
         };
-        products.unshift(newProduct);
+        // Añade el nuevo producto AL PRINCIPIO del arreglo en memoria.
+        // Este producto desaparecerá al recargar la página.
+        products.unshift(newProduct); 
         renderProducts();
         showMessage("Producto publicado correctamente");
         // Clear form
